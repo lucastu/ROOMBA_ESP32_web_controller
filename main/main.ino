@@ -6,6 +6,16 @@
   The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 *********/
 
+
+/*------------------------------------------------------------------
+  Roomba Control
+  ==> Main commands according IRobot Open Interface doc:  http://www.irobotweb.com/~/media/MainSite/PDFs/About/STEM/Create/iRobot_Roomba_600_Open_Interface_Spec.pdf?la=enBasic
+  ==> Several commands based on Create2 library developed by Dom Amato: https://github.com/brinnLabs/Create2
+  Marcelo Jose Rovai - 30 June, 2016 - Visit: http://mjrobot.org
+  -------------------------------------------------------------------*/
+#include "roombaDefines.h"
+#include <SoftwareSerial.h>
+
 #include "esp_camera.h"
 #include <WiFi.h>
 #include "esp_timer.h"
@@ -19,6 +29,10 @@
 // Replace with your network credentials
 const char* ssid = "REPLACE_WITH_YOUR_SSID";
 const char* password = "REPLACE_WITH_YOUR_PASSWORD";
+
+const int rxPin = 10;
+const int txPin = 11;
+SoftwareSerial Roomba(rxPin, txPin);
 
 #define PART_BOUNDARY "123456789000000000000987654321"
 
@@ -293,6 +307,7 @@ void startCameraServer(){
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
   
+  Roomba.begin(19200);
   Serial.begin(115200);
   Serial.setDebugOutput(false);
   
@@ -348,6 +363,7 @@ void setup() {
   
   // Start streaming web server
   startCameraServer();
+  Serial.println("Init over !");
 }
 
 void loop() {
