@@ -12,26 +12,12 @@ int motorSpeed = 100;
 char command = 0; // variable to store command received from IR or BT remote control
 char state = 0;
 
-// const int buttonPin = 2;
-// const int analogPinX = A3;
-// const int analogPinY = A4;
-// const int treshold = 512;
-// const int precision = 50;
-// bool flag = false;
-// int valx = 0;
-// int valy = 0;
-// int buttonState = 0;
-// long int timesincepressed = 0;
-// bool buttonpressed = false;
-// int calculatedKey;
-
 //unsigned long data;
 //int key ;
 int radius;
 int velocity;
 
-//int ledPin=13;
-int ddPin=5; //device detect
+const int ddPin=2; //device detect can be 2, 4 or 12 to 15
 
 bool debrisLED;
 bool spotLED;
