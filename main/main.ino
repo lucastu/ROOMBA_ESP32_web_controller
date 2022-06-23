@@ -215,23 +215,23 @@ static esp_err_t cmd_handler(httpd_req_t *req){
   int res = 0;
   
   if(!strcmp(variable, "forward")) {
-    Serial.println("Forward");
+    driveWheels(50, 50);
     //Commande avance
   }
   else if(!strcmp(variable, "left")) {
-    Serial.println("Left");
+    driveWheels(-50, 50);
     //Commande gauche
   }
   else if(!strcmp(variable, "right")) {
-    Serial.println("Right");
+     driveWheels(50, -50);;
     //Commande Droite
   }
   else if(!strcmp(variable, "backward")) {
-    Serial.println("Backward");
+    driveWheels(-50, -50);
     //Commande BACK
   }
   else if(!strcmp(variable, "stop")) {
-    Roomba.write(128);
+    driveWheels(0,0);
     //Commande Stop
   }
   else {
