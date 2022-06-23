@@ -25,12 +25,12 @@ char state = 0;
 // bool buttonpressed = false;
 // int calculatedKey;
 
-unsigned long data;
-int key ;
+//unsigned long data;
+//int key ;
 int radius;
-int velocity ;
+int velocity;
 
-int ledPin=13;
+//int ledPin=13;
 int ddPin=5; //device detect
 
 bool debrisLED;
