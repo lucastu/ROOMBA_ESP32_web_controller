@@ -13,9 +13,7 @@
   ==> Several commands based on Create2 library developed by Dom Amato: https://github.com/brinnLabs/Create2
   Marcelo Jose Rovai - 30 June, 2016 - Visit: http://mjrobot.org
   *********/
-// #define unsigned char byte
 
-//#include <HardwareSerial.h>
 #include "Arduino.h"
 #include <esp_camera.h>
 #include <WiFi.h>
@@ -32,7 +30,8 @@ const char* ssid = "Bbox-8FC48173";
 const char* password = "DGrppnRU72xap3xFMk";
 
 #define Roomba Serial
-
+#define LEDblanche 4 // LED blanche: GPIO 4
+#define canalPWM 7 // un canal PWM disponible
 
 #define PART_BOUNDARY "123456789000000000000987654321"
 
@@ -101,9 +100,11 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
     <h1>ESP32-CAM Robot</h1>
     <img src="" id="photo" >
     <table>
-      <tr><td colspan="3" align="center"><button class="button" onmousedown="toggleCheckbox('forward');" ontouchstart="toggleCheckbox('forward');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Forward</button></td></tr>
-      <tr><td align="center"><button class="button" onmousedown="toggleCheckbox('left');" ontouchstart="toggleCheckbox('left');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Left</button></td><td align="center"><button class="button" onmousedown="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('stop');">Stop</button></td><td align="center"><button class="button" onmousedown="toggleCheckbox('right');" ontouchstart="toggleCheckbox('right');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Right</button></td></tr>
-      <tr><td colspan="3" align="center"><button class="button" onmousedown="toggleCheckbox('backward');" ontouchstart="toggleCheckbox('backward');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Backward</button></td></tr>                   
+      <tr><td colspan="3" align="center"><button class="button" onmousedown="toggleCheckbox('forward');" ontouchstart="toggleCheckbox('forward');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Avance</button></td></tr>
+      <tr><td align="center"><button class="button" onmousedown="toggleCheckbox('left');" ontouchstart="toggleCheckbox('left');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Gauche</button></td><td align="center"><button class="button" onmousedown="toggleCheckbox('stop');" ontouchstart="toggleCheckbox('stop');">Stop</button></td><td align="center"><button class="button" onmousedown="toggleCheckbox('right');" ontouchstart="toggleCheckbox('right');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Droite</button></td></tr>
+      <tr><td colspan="3" align="center"><button class="button" onmousedown="toggleCheckbox('backward');" ontouchstart="toggleCheckbox('backward');" onmouseup="toggleCheckbox('stop');" ontouchend="toggleCheckbox('stop');">Recule</button></td></tr>
+      <tr><td align="center"><button class="button" onmousedown="toggleCheckbox('led_on');" ontouchstart="toggleCheckbox('led_on');">Led ON</button></td><td align="center"><button class="button" onmousedown="toggleCheckbox('led_off');" ontouchstart="toggleCheckbox('led_off');">Led OFF</button></td></tr>                                    
+      <tr><td align="center"><button class="button" onmousedown="toggleCheckbox('start_roomba');" ontouchstart="toggleCheckbox(start_roomba);">Demarre ROOMBA</button></td><td align="center"><button class="button" onmousedown="toggleCheckbox(dock);" ontouchstart="toggleCheckbox(dock);">Dock</button></td><td align="center"><button class="button" onmousedown="toggleCheckbox('stop_roomba');" ontouchstart="toggleCheckbox(stop_roomba);">Arrete ROOMBA</button></td></tr>                   
     </table>
    <script>
    function toggleCheckbox(x) {
@@ -213,27 +214,48 @@ static esp_err_t cmd_handler(httpd_req_t *req){
 
   sensor_t * s = esp_camera_sensor_get();
   int res = 0;
-  
+  int velocity = 250;
+
   if(!strcmp(variable, "forward")) {
-    driveWheels(50, 50);
+    driveWheels(velocity, velocity);
     //Commande avance
   }
-  else if(!strcmp(variable, "left")) {
-    driveWheels(-50, 50);
+  else if(!strcmp(variable, "right")) {
+    driveWheels(-velocity, velocity);
     //Commande gauche
   }
-  else if(!strcmp(variable, "right")) {
-     driveWheels(50, -50);;
+  else if(!strcmp(variable, "left")) {
+     driveWheels(velocity, -velocity);;
     //Commande Droite
   }
   else if(!strcmp(variable, "backward")) {
-    driveWheels(-50, -50);
+    driveWheels(-velocity, -velocity);
     //Commande BACK
   }
   else if(!strcmp(variable, "stop")) {
     driveWheels(0,0);
     //Commande Stop
   }
+  else if(!strcmp(variable, "led_on")) {
+    ledcWrite(canalPWM, 4000);
+  }  
+  else if(!strcmp(variable, "led_off")) {
+    ledcWrite(canalPWM, 0);
+  }
+  else if(!strcmp(variable, "start_roomba")) {
+    wakeUp();   // Wake-up Roomba
+    startSafe(); // Start Roomba in Safe Mode
+    setDebrisLED(true);
+    setSpotLED(true);
+    setDockLED(true);
+    playSound(1); 
+  }      
+  else if(!strcmp(variable, "dock")) {
+    seekDock();
+  }
+  else if(!strcmp(variable, "stop_roomba")) {
+    stop();
+  }  
   else {
     res = -1;
   }
@@ -281,10 +303,8 @@ void startCameraServer(){
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
-  
-  //Roomba.begin(19200,SERIAL_8N1, RXD2, TXD2);
-  Serial.begin(19200);
-  Serial.setDebugOutput(false);
+  ledcAttachPin(LEDblanche, 7); // Signal PWM broche 4, canal 7.
+  ledcSetup(canalPWM, 5000, 12); // canal = 7, frequence = 5000 Hz, resolution = 12 bits
   
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -321,24 +341,17 @@ void setup() {
   // Camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
+    //Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
   // Wi-Fi connection
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
   }
-  Serial.println("");
-  Serial.println("WiFi connected");
-  
-  Serial.print("Camera Stream Ready! Go to: http://");
-  Serial.println(WiFi.localIP());
-  
   // Start streaming web server
   startCameraServer();
-  Serial.println("Init over !");
+  Roomba.begin(115200);
 }
 
 void loop() {

@@ -13,7 +13,7 @@ void setup()
   startSafe(); // Start Roomba in Safe Mode
   playSound(2); 
   delay(2000);
-  playSound(2); //if make sound, I'm happy
+  playSound(3); //if make sound, I'm happy
 }
 
 
